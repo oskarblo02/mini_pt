@@ -13,6 +13,9 @@ ACCEL_YOUT_L = 0x3E
 ACCEL_ZOUT_H = 0x3F
 ACCEL_ZOUT_L = 0x40
 
+# Register address for the accelerometer configuration
+ACCEL_CONFIG2 = 0x1D
+
 # Accelerometer sensitivity in LSB/g
 AFS_SEL_SENSITIVITY = {
     0: 16384,
@@ -23,6 +26,7 @@ AFS_SEL_SENSITIVITY = {
 
 # Initialize I2C bus and open a connection to the ICM20600 sensor
 bus = smbus2.SMBus(7)
+bus.write_byte_data(ICM20600_ADDR, ACCEL_CONFIG2, 0x09)
 bus.write_byte_data(ICM20600_ADDR, 0x6B, 0x00)
 
 while True:

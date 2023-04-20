@@ -76,14 +76,14 @@ def acceleration():
     accel_sum  = math.sqrt(accel_x**2 + accel_y**2 + accel_z**2)
     return accel_sum
     
-time_start_og = time.monotonic()
+speed = 0
 t2 = time.monotonic()
+accel_sum_zero_last = 0
+dt = 0
 
 while True:
-    time_start = time.monotonic()
-    t1 = time.monotonic()
     
-    # calibrates the gravity
+        # calibrates the gravity
     if grav_yes == False:
         for i in range(1000): 
             accel_sum_mid += acceleration()
@@ -91,23 +91,22 @@ while True:
         gravity = accel_sum_mid
         grav_yes = True
         print("GO GO GO!!!")
-     
+    # calculate acceleration
     accel_sum_zero = acceleration() - gravity
     
     # if the acceleration is below the threshold, assume stationary and set speed to zero
     if abs(accel_sum_zero) > 0.1:
         # calculate velocity using trapezoidal rule
+        t1 = time.monotonic()
         dt = t1 - t2
+    if accel_sum_zero < 0:
+        speed -= ((-1*accel_sum_zero + accel_sum_zero_last) / 2) * dt
+    else:
         speed += ((accel_sum_zero + accel_sum_zero_last) / 2) * dt
         t2 = t1
         accel_sum_zero_last = accel_sum_zero
-
-    if abs(accel_sum_zero) < 0.1:
-        speed_reset += 1
-        
-    if speed_reset > 100:
+    else:
         speed = 0
-        speed_reset = 0
     
     print("Acceleration:", round(accel_sum_zero, 2), "m/s^2, Speed: ", round(speed, 2), "m/s, dt:", dt)
     
@@ -129,16 +128,3 @@ while True:
         f.write("time;accel;accel_zero;speed;total time;\n")
         for i in range(elements):
             f.write(f"{time_elapsed[i]};{list_accel_sum[i]};{list_accel_zero[i]};{speed_list[i]};{total_time[i]};\n")
-    
-    
-    
-    # Print the acceleration in m/s^2
-    #print("Acceleration in X direction: ", round(accel_x, 2), "m/s^2")
-    #print("Acceleration in Y direction: ", round(accel_y, 2), "m/s^2")
-    #print("Acceleration in Z direction: ", round(accel_z, 2), "m/s^2")
-    #print("Acceleration: ", acceleration(), "m/s^2")
-   #print("Acceleration Mid: ", round(accel_sum_mid, 2), "m/s^2")
-    #print("Acceleration Zero: ", accel_sum_zero, "m/s^2")
-    #print("Reps: ", reps, "st")
-   #print("time:", round(time_elapsed[elements-1], 2) , "s")
-    #ime.sleep(0.1)
