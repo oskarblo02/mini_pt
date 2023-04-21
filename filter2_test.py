@@ -37,7 +37,7 @@ smplrt_div_value = int(1000 / sampling_rate) - 1
 
 
 # Number of samples to use in the moving average filter
-N_SAMPLES = 10
+N_SAMPLES = 6
 
 # Initialize I2C bus and open a connection to the ICM20600 sensor
 bus = smbus2.SMBus(7)
@@ -48,18 +48,22 @@ bus.write_byte_data(ICM20600_ADDR, SMPLRT_DIV, smplrt_div_value)
 
 # Initialize a buffer for the accelerometer data
 accel_buffer = []
+accel_sampels = []
 
 # Rep counting variabels
 rep_start = False
 rep_apex = False
 rep_end = True
-rep_time = [0 for i in range(100)]
+rep_time = [0 for i in range(1000)]
 rep_time_start = 0
 rep_time_end = 0
+apex_time = 0
 rep_count = 0
-rep_disp = 0
+rep_disp = [0 for i in range(1000)]
 peak_accel = 0
-rep_avg_speed = 0
+rep_avg_speed = [0 for i in range(1000)]
+num_samples = 0
+time_interval = 0
 
 while True:
     # Read the raw accelerometer data from the sensor
@@ -87,42 +91,51 @@ while True:
 
     if accel_sum_filt > 1.05 and rep_end:
         rep_start = True
+        print("START")
         rep_time_start = time.time()
         rep_end = False
+        rep_stay = False
         
-    if accel_sum_filt < 0.95 and rep_start:
+    if rep_start and not rep_apex:
+        if accel_sum_filt > 1.02 or accel_sum_filt < 0.98:
+            accel_sampels.append((accel_sum_filt * 9.82) - 9.82)
+        
+    if accel_sum_filt < 0.95 and rep_start and not rep_apex:
         rep_apex = True
+        apex_time = time.time() - rep_time_start
+        print("APEX")
+        num_samples = len(accel_sampels) 
+        time_interval = apex_time / num_samples
+
         
-    if accel_sum_filt < 0.95 and rep_start and rep_apex:
+    if accel_sum_filt > 1.05 and rep_start and rep_apex:
         rep_count += 1
         rep_start = False
         rep_apex = False
         rep_end = True
+        
+        print("END")
         rep_time_end = time.time()
         rep_time[rep_count-1] = rep_time_end - rep_time_start
-        if rep_count > 0:
-        # Calculate displacement assuming symmetric deceleration
-            peak_accel = sum(accel_buffer)/len(accel_buffer)
-            rep_disp = 0.5 * peak_accel * rep_time[rep_count-1]**2
-                
-            # Calculate average speed
-            rep_avg_speed = rep_disp / rep_time[rep_count-1]
-
+        for i in range(1, num_samples):
+            rep_avg_speed[rep_count-1] = rep_avg_speed[rep_count-1] + 0.5 * (accel_sampels[i] + accel_sampels[i-1]) * time_interval 
+        accel_sampels.pop()
+        rep_disp[rep_count-1] = apex_time * rep_avg_speed[rep_count-1]
         
     # Print results
-    print("Rep count:", rep_count)
-    print("Rep time:", round(rep_time[rep_count-1], 2), "s")
-    print("Rep displacement:", round(rep_disp, 2), "m")
-    print("Rep average speed:", round(rep_avg_speed, 2), "m/s")
+    #print("Rep count:", rep_count)
+    #print("Rep time:", round(rep_time[rep_count-1], 2), "s")
+    #print("Rep displacement:", round(rep_disp, 2), "m")
+    #print("Rep average speed:", round(rep_avg_speed, 2), "m/s")
     
     # Print the acceleration in m/s^2
-    print("Acceleration in X direction: ", round(accel_x, 2), "g")
-    print("Acceleration in Y direction: ", round(accel_y, 2), "g")
-    print("Acceleration in Z direction: ", round(accel_z, 2), "g")
-    print("Acceleration: ", round(accel_sum, 2), "g")
+    #print("Acceleration in X direction: ", round(accel_x, 2), "g")
+    #print("Acceleration in Y direction: ", round(accel_y, 2), "g")
+    #print("Acceleration in Z direction: ", round(accel_z, 2), "g")
+    #print("Acceleration: ", round(accel_sum, 2), "g")
     print("Filtered acceleration: ", round(accel_sum_filt, 2), "g")
-    print("reps: ", rep_count, "st, last rep time:", rep_time[rep_count], "s")
-    for i in range(rep_count):
-        print("reps: ", i+1, "st, time:", round(rep_time[i], 2) , "s")
+    #print("reps: ", rep_count, "st, last rep time:", rep_time[rep_count], "s")
+    #for i in range(rep_count):
+    #    print("Reps:", i+1, "st, Time:", round(rep_time[i], 2), "s, ROM:", round(rep_disp[i], 2), "m, Speed:", round(rep_avg_speed[i], 2), "m/s")
 
     time.sleep(1/sampling_rate)
