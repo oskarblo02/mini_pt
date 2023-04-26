@@ -29,7 +29,7 @@ AFS_SEL_SENSITIVITY = {
 SMPLRT_DIV = 0x19
 
 # Set the desired sampling rate (e.g. 100 Hz)
-sampling_rate = 100
+sampling_rate = 1000
 
 # Calculate the new value for the SMPLRT_DIV register
 smplrt_div_value = int(1000 / sampling_rate) - 1
@@ -50,10 +50,11 @@ accel_sampels = []
 
 # Rep counting variabels
 rep_count = 0
-rep_time = np.zeros(1000)
-up_time = np.zeros(1000)
-down_time = np.zeros(1000)
-paus_time = np.zeros(1000)
+rep_time = np.zeros(100)
+up_time = np.zeros(100)
+down_time = np.zeros(100)
+paus_time = np.zeros(100)
+extreme_explosive_power_factor = np.zeros(100)
 rep_time_start = 0
 time_start = 0
 moving_up = False
@@ -69,15 +70,9 @@ check_down = False
 check_time = False
 high = 0
 low = 0
-plutt_up = 0
-plutt_down = 0
 
 ACCEL_UP = 1.05
 ACCEL_DOWN = 0.95
-
-
-num_samples = 0
-time_interval = 0
 
 while True:
     # Read the raw accelerometer data from the sensor
@@ -117,7 +112,6 @@ while True:
         stationary = True
         up = True
         been_up = True
-        plutt_up +=1
         moving_up = False
         high = 0
         if not check_up:
@@ -139,20 +133,23 @@ while True:
         stationary = True
         down = True
         been_down = True
-        plutt_down += 1
         moving_down = False
         low = 0
         if not check_down:
             down_time[rep_count] = time.time() - time_start
             check_down = True
-
-    if (moving_down or moving_up) and not check_time:
-        rep_time_start = time.time()
-        check_time = True 
+        
 
     if been_down and been_up:
-        rep_time[rep_count] = time.time() - rep_time_start
-        paus_time[rep_count] = rep_time[rep_count] - down_time[rep_count] - up_time[rep_count]
+        rep_time[rep_count] = down_time[rep_count] + up_time[rep_count]
+        
+        if up_time[rep_count] < 0.5:
+            extreme_explosive_power_factor = 100
+        elif up_time[rep_count] > 10.5:
+            extreme_explosive_power_factor = 0
+        else:
+            extreme_explosive_power_factor[rep_count] = (10.5 - up_time[rep_count]) * 10
+            
         been_up = False
         been_down = False
         check_down = False
@@ -160,14 +157,9 @@ while True:
         check_time = False
         start_point = True
         rep_count +=1
-        
-    print("accel        ", round(accel_sum_filt, 2))
-    print("high         ", high)
-    print("low          ", low)
-    print("rep count    ", rep_count)
-    print("up time      ", round(up_time[rep_count], 2))
-    print("paus time      ", round(paus_time[rep_count], 2))
-    print("down time    ", round(down_time[rep_count], 2))
+       
+       
+    print("accel            ", round(accel_sum_filt, 2))
     if stationary:
         print("stationary   ")
     if moving_up:
@@ -188,18 +180,12 @@ while True:
         print("check up     ")
     if check_down:
         print("check down   ")
-    if check_time:
-        print("check time   ")
 
-    #if rep_count >0:
-    #    print("up time      ", round(up_time[rep_count-1], 2))
-    #    print("down time    ", round(down_time[rep_count-1], 2))
-    #    print("rep time     ", round(rep_time[rep_count-1], 2))
 
 
     for i in range(rep_count):
         print("reps:        ", i+1)
         print("rep time:    ", round(rep_time[i], 2))
-        print("down time:   ", round(down_time[i], 2))
-        print("up time:     ", round(up_time[i], 2))
+        print("EEPF         ", round(extreme_explosive_power_factor[i], 2), "%")
+        
     time.sleep(1/sampling_rate)
