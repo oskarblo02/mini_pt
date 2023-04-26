@@ -18,6 +18,8 @@ stationary = True
 start_point = True
 check_up = False
 check_down = False
+high = 0
+low = 0
 
 ACCEL_UP = 1.05
 ACCEL_DOWN = 0.95
@@ -25,50 +27,39 @@ ACCEL_DOWN = 0.95
 while True:
     accel_sum_filt = float(input("acceleration: "))
 
-    if accel_sum_filt > ACCEL_UP and (start_point or not stationary):
+    if accel_sum_filt > ACCEL_UP and high == 0:
         moving_up = True
-        moving_down = False
-        up = False
-        down = False
         stationary = False
-        start_point = False
-        print("moving up")
-
-    if accel_sum_filt < ACCEL_DOWN and (start_point or not stationary):
-        moving_up = False
-        moving_down = True
-        up = False
-        down = False
-        stationary = False
-        start_point = False
-        print("moving down")
-
-    if accel_sum_filt < ACCEL_UP and accel_sum_filt > ACCEL_DOWN:
+        high  = 1
+    if accel_sum_filt < ACCEL_UP and high == 1:
+        high  = 2
+    if accel_sum_filt < ACCEL_DOWN and high == 2:
+        high  = 3
+    if accel_sum_filt > ACCEL_DOWN and high == 3:
+        high = 4
+    if accel_sum_filt < ACCEL_UP and accel_sum_filt > ACCEL_DOWN and high == 4:
         stationary = True
-        print("stationary")
-
-    if stationary and (accel_sum_filt > ACCEL_UP or accel_sum_filt < ACCEL_DOWN) and (not moving_down and not moving_up):
-        stationary = False
-        if accel_sum_filt > ACCEL_UP:
-            moving_up = True
-            print("moving up")
-        if accel_sum_filt < ACCEL_DOWN:
-            moving_down = True
-            print("moving down")
-
-    if (moving_up or up) and stationary:
-        moving_up = False
-        moving_down = False
         up = True
-        been_up = True
-        print("up")
-    
-    if (moving_down or down) and stationary:
+        been_up == True
         moving_up = False
-        moving_down = False
+        high = 0
+
+    if accel_sum_filt < ACCEL_DOWN and low == 0:
+        moving_down = True
+        stationary = False
+        low  = 1
+    if accel_sum_filt > ACCEL_DOWN and low == 1:
+        low  = 2
+    if accel_sum_filt > ACCEL_UP and low == 2:
+        low  = 3
+    if accel_sum_filt < ACCEL_UP and low == 3:
+        low = 4
+    if accel_sum_filt < ACCEL_UP and accel_sum_filt > ACCEL_DOWN and low == 4:
+        stationary = True
         down = True
         been_down = True
-        print("down")
+        moving_down = False
+        low = 0
 
     if moving_down:
         time_start = time.time()
@@ -99,6 +90,8 @@ while True:
         start_point = True
         rep_count +=1
 
+    print("high         ", high)
+    print("low          ", low)
     print("stationary   ", stationary)
     print("moving up    ", moving_up)
     print("moving dowwn ", moving_down)
