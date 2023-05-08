@@ -6,13 +6,20 @@ import numpy as np
 import matplotlib.pyplot as plt
 from tinydb import TinyDB, Query
 
+set_count = 0
+with open("set_count.csv", "r") as f:
+    set_count = int(f.read().strip())
+
+set_count += 1
+
+with open("set_count.csv", "w") as f:
+    f.write(f"{set_count}")
+
 # Create a database object and specify the file name
 db = TinyDB('minipt.json')
 
-setcount = 1
-
 # Create a table object and specify the table name
-table_name = 'set' + str(setcount)
+table_name = 'set' + str(set_count)
 table = db.table(table_name)
 
 # I2C address of the ICM20600 sensor
